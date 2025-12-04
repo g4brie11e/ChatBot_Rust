@@ -1,0 +1,12 @@
+[package]
+name = "chatbot-backend"
+version = "0.1.0"
+edition = "2024"
+
+[dependencies]
+axum = "0.8.7"
+serde = "1.0.228"
+serde_json = "1.0.145"
+tokio = "1.48.0"
+tower-http = "0.6.7"
+uuid = "1.19.0"
