@@ -1,8 +1,19 @@
+// src/state.rs
 use std::sync::Arc;
-use tokio::sync::Mutex;
-use std::collections::HashMap;
+use std::time::Duration;
 
-#[derive(Clone)]
+use crate::services::session_manager::SessionManager;
+
+pub type SharedState = Arc<AppState>;
+
 pub struct AppState {
-    pub sessions: Arc<Mutex<HashMap<String, Vec<String>>>>,
+    pub sessions: SessionManager,
+}
+
+impl AppState {
+    pub fn new(session_ttl: Duration) -> Self {
+        Self {
+            sessions: SessionManager::new(session_ttl),
+        }
+    }
 }

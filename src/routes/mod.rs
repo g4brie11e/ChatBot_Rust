@@ -1,12 +1,12 @@
-use axum::{Router, routing::post};
-
+// src/routes/mod.rs
 pub mod chat;
 
-use crate::state::AppState;
+use axum::{Router, routing::{post, get}};
+use crate::state::SharedState;
 use chat::chat_handler;
 
-pub fn create_router() -> Router<AppState> {
+pub fn create_router() -> Router<SharedState> {
     Router::new()
         .route("/chat", post(chat_handler))
-        .route("/health", axum::routing::get(|| async { "OK" }))
+        .route("/health", get(|| async { "OK" }))
 }

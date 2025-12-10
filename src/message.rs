@@ -1,9 +1,10 @@
-use serde::{Serialize, Deserialize};
+// src/message.rs
+use serde::{Deserialize, Serialize};
 
 #[derive(Deserialize)]
 pub struct ChatRequest {
-    pub message: String,
     pub session_id: Option<String>,
+    pub message: String,
 }
 
 #[derive(Serialize)]

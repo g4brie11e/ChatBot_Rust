@@ -1,33 +1,43 @@
-use axum::{Router, routing::get};
-use tower_http::cors::CorsLayer;
+// src/main.rs (relevant parts)
+use axum::{routing::get, Router};
+use std::net::SocketAddr;
+use std::sync::Arc;
+use std::time::Duration;
+use tokio::time;
 
 mod routes;
 mod state;
 mod message;
-mod rules;
 mod services;
 
-use state::AppState;
+use crate::state::AppState;
 
 #[tokio::main]
 async fn main() {
-    let state = AppState {
-        sessions: std::sync::Arc::new(tokio::sync::Mutex::new(
-            std::collections::HashMap::new(),
-        )),
-    };
+    tracing_subscriber::fmt::init();
 
-    let cors = CorsLayer::very_permissive();
+    let state = Arc::new(AppState::new(Duration::from_secs(60 * 60)));
+
+    {
+        let sessions_clone = state.sessions.clone();
+        tokio::spawn(async move {
+            let mut interval = time::interval(Duration::from_secs(60 * 5));
+            loop {
+                interval.tick().await;
+                let removed = sessions_clone.purge_expired().await;
+                if removed > 0 {
+                    tracing::info!(removed, "purged expired sessions");
+                }
+            }
+        });
+    }
 
     let app = routes::create_router()
-        .route("/", get(|| async { "YOU ARE CONNECTED " }))
-        .with_state(state)
-        .layer(cors);
+        .with_state(state.clone());
 
-    let listener = tokio::net::TcpListener::bind("0.0.0.0:3000")
-        .await
-        .unwrap();
+    let addr: SocketAddr = "0.0.0.0:3000".parse().unwrap();
+    tracing::info!("listening on {}", addr);
 
-    println!("MVP chatbot running at http://localhost:3000");
+    let listener = tokio::net::TcpListener::bind(addr).await.unwrap();
     axum::serve(listener, app).await.unwrap();
 }
