@@ -4,7 +4,7 @@ use uuid::Uuid;
 use crate::{
     state::AppState,
     message::{ChatRequest, ChatResponse},
-    services::chatbot::generate_reply,  // ✅ correct si services/chatbot.rs existe
+    services::chatbot::generate_reply,  
     rules::apply_basic_rules,
 };
 

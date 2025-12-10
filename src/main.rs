@@ -28,6 +28,6 @@ async fn main() {
         .await
         .unwrap();
 
-    println!("🚀 MVP chatbot running at http://localhost:3000");
+    println!("MVP chatbot running at http://localhost:3000");
     axum::serve(listener, app).await.unwrap();
 }
