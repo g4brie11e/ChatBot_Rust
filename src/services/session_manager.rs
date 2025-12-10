@@ -68,6 +68,7 @@ impl SessionManager {
         guard.insert(id.clone(), session);
         id
     }
+    
 
     // Ensure there's a session with this id.
     pub async fn ensure_session(&self, id: &str) -> String {

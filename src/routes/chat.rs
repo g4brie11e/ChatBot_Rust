@@ -17,13 +17,15 @@ pub async fn chat_handler(
         }
         _ => state.sessions.create_session().await,
     };
+    let history = state.sessions.get_history(&session_id).await;
+    println!("Session {} history: {:?}", session_id, history);
 
     let trimmed = payload.message.trim();
 
     if trimmed.is_empty() {
         return Json(ChatResponse {
             session_id,
-            reply: "Je n’ai pas reçu de message. Peux-tu écrire quelque chose ?".to_string(),
+            reply: "i didnt get anything can you write again ?".to_string(),
         });
     }
 

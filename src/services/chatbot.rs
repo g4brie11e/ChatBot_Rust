@@ -26,9 +26,9 @@ pub fn generate_reply(history: &Vec<String>, user_msg: &str) -> String {
     match intent {
         Greeting => {
             if history.is_empty() {
-                "Hi, how can I help you".to_string()
-            } else {
                 "Hy again can I help you ?".to_string()
+            } else {
+                "Hi, how can I help you".to_string()
             }
         }
 
