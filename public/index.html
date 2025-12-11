@@ -1,0 +1,34 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <title>Chatbot</title>
+</head>
+<body>
+    <h1>Chatbot</h1>
+    <input id="msg" placeholder="Écris un message..." />
+    <button onclick="send()">Envoyer</button>
+
+    <pre id="chat"></pre>
+
+<script>
+let sessionId = null;
+
+async function send() {
+    const message = document.getElementById("msg").value;
+
+    const res = await fetch("/chat", {
+        method: "POST",
+        headers: {"Content-Type": "application/json"},
+        body: JSON.stringify({ message, session_id: sessionId })
+    });
+
+    const data = await res.json();
+    sessionId = data.session_id;
+
+    document.getElementById("chat").textContent += "You: " + message + "\n";
+    document.getElementById("chat").textContent += "Bot: " + data.reply + "\n\n";
+}
+</script>
+</body>
+</html>

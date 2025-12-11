@@ -8,7 +8,7 @@ pub enum Intent {
 pub fn detect_intent(msg: &str) -> Intent {
     let msg_lower = msg.to_lowercase();
 
-    if msg_lower.contains("hello") || msg_lower.contains("hi") || msg_lower.contains("salut") {
+    if msg_lower.contains("hello") || msg_lower.contains("hi") {
         Intent::Greeting
     } else if msg_lower.contains("web site") || msg_lower.contains("e-commerce") {
         Intent::WebsiteRequest

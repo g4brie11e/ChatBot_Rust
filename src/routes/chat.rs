@@ -5,6 +5,11 @@ use crate::message::{ChatRequest, ChatResponse};
 use crate::state::SharedState;
 use crate::services::session_manager::MessageRole;
 use crate::services::chatbot::{generate_reply}; 
+use axum::routing::get_service;
+use tower_http::services::ServeDir;
+use crate::Router;
+use crate::routes::post;
+use crate::get;
 
 pub async fn chat_handler(
     State(state): State<SharedState>,
@@ -42,4 +47,17 @@ pub async fn chat_handler(
     state.sessions.append_message(&session_id, MessageRole::Bot, &reply).await;
 
     Json(ChatResponse { session_id, reply })
+}
+
+pub fn create_router() -> Router<SharedState> {
+    Router::new()
+        .route("/chat", post(chat_handler))
+        .route("/health", get(|| async { "OK" }))
+        // Serve the `public/` folder at the root
+        .nest_service("/", get_service(ServeDir::new("public")).handle_error(|err| async move {
+            (
+                axum::http::StatusCode::INTERNAL_SERVER_ERROR,
+                format!("Erreur serveur: {}", err),
+            )
+        }))
 }
