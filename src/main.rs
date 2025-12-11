@@ -8,6 +8,7 @@ use tokio::time;
 mod routes;
 mod state;
 mod message;
+mod error;
 mod services;
 
 use crate::state::AppState;
