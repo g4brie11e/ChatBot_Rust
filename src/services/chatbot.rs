@@ -36,7 +36,7 @@ pub fn generate_reply(history: &Vec<String>, user_msg: &str) -> String {
             if history.iter().any(|m| m.to_lowercase().contains("web site")) {
                 "Have you some suggestion about youor project".to_string()
             } else {
-                "Do you have a specific ides of your project and your price ? ".to_string()
+                "Do you have a specific ideas of your project and your price ? ".to_string()
             }
         }
 
