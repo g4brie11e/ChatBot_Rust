@@ -1,0 +1,14 @@
+/home/ciesla/Documents/Erasmus/Rust/ChatBot_Rust/chatbot-backend/target/debug/deps/serde-dfe852d0e9230ee2.d: /home/ciesla/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/serde-1.0.228/src/lib.rs /home/ciesla/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/serde-1.0.228/src/integer128.rs /home/ciesla/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/serde-1.0.228/src/private/mod.rs /home/ciesla/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/serde-1.0.228/src/private/de.rs /home/ciesla/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/serde-1.0.228/src/private/ser.rs /home/ciesla/Documents/Erasmus/Rust/ChatBot_Rust/chatbot-backend/target/debug/build/serde-e612e86ffa702f9d/out/private.rs
+
+/home/ciesla/Documents/Erasmus/Rust/ChatBot_Rust/chatbot-backend/target/debug/deps/libserde-dfe852d0e9230ee2.rlib: /home/ciesla/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/serde-1.0.228/src/lib.rs /home/ciesla/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/serde-1.0.228/src/integer128.rs /home/ciesla/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/serde-1.0.228/src/private/mod.rs /home/ciesla/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/serde-1.0.228/src/private/de.rs /home/ciesla/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/serde-1.0.228/src/private/ser.rs /home/ciesla/Documents/Erasmus/Rust/ChatBot_Rust/chatbot-backend/target/debug/build/serde-e612e86ffa702f9d/out/private.rs
+
+/home/ciesla/Documents/Erasmus/Rust/ChatBot_Rust/chatbot-backend/target/debug/deps/libserde-dfe852d0e9230ee2.rmeta: /home/ciesla/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/serde-1.0.228/src/lib.rs /home/ciesla/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/serde-1.0.228/src/integer128.rs /home/ciesla/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/serde-1.0.228/src/private/mod.rs /home/ciesla/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/serde-1.0.228/src/private/de.rs /home/ciesla/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/serde-1.0.228/src/private/ser.rs /home/ciesla/Documents/Erasmus/Rust/ChatBot_Rust/chatbot-backend/target/debug/build/serde-e612e86ffa702f9d/out/private.rs
+
+/home/ciesla/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/serde-1.0.228/src/lib.rs:
+/home/ciesla/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/serde-1.0.228/src/integer128.rs:
+/home/ciesla/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/serde-1.0.228/src/private/mod.rs:
+/home/ciesla/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/serde-1.0.228/src/private/de.rs:
+/home/ciesla/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/serde-1.0.228/src/private/ser.rs:
+/home/ciesla/Documents/Erasmus/Rust/ChatBot_Rust/chatbot-backend/target/debug/build/serde-e612e86ffa702f9d/out/private.rs:
+
+# env-dep:OUT_DIR=/home/ciesla/Documents/Erasmus/Rust/ChatBot_Rust/chatbot-backend/target/debug/build/serde-e612e86ffa702f9d/out

@@ -1,34 +1,61 @@
 <!DOCTYPE html>
-<html>
+<html lang="en">
 <head>
     <meta charset="UTF-8">
-    <title>Chatbot</title>
+    <title>Rust Chatbot</title>
+    <style>
+        body { font-family: sans-serif; max-width: 600px; margin: 20px auto; }
+        #chat-box { height: 300px; border: 1px solid #ccc; overflow-y: scroll; padding: 10px; margin-bottom: 10px; }
+        .user { color: blue; }
+        .bot { color: green; }
+    </style>
 </head>
 <body>
-    <h1>Chatbot</h1>
-    <input id="msg" placeholder="send a message..." />
-    <button onclick="send()">Envoyer</button>
+    <h2>Chatbot UI</h2>
+    <div id="chat-box"></div>
+    <input type="text" id="messageInput" placeholder="Type a message...">
+    <button onclick="sendMessage()">Send</button>
 
-    <pre id="chat"></pre>
+    <script>
+        let currentSessionId = null;
 
-<script>
-let sessionId = null;
+        async function sendMessage() {
+            const input = document.getElementById('messageInput');
+            const chatBox = document.getElementById('chat-box');
+            const message = input.value;
 
-async function send() {
-    const message = document.getElementById("msg").value;
+            if (!message) return;
 
-    const res = await fetch("/chat", {
-        method: "POST",
-        headers: {"Content-Type": "application/json"},
-        body: JSON.stringify({ message, session_id: sessionId })
-    });
+            // Display user message
+            chatBox.innerHTML += `<p class="user"><b>You:</b> ${message}</p>`;
+            input.value = '';
 
-    const data = await res.json();
-    sessionId = data.session_id;
+            try {
+                // IMPORTANT: This must be a POST request
+                const response = await fetch('/chat', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        message: message,
+                        session_id: currentSessionId
+                    })
+                });
 
-    document.getElementById("chat").textContent += "You: " + message + "\n";
-    document.getElementById("chat").textContent += "Bot: " + data.reply + "\n\n";
-}
-</script>
+                const data = await response.json();
+                
+                if (response.ok) {
+                    currentSessionId = data.session_id; // Store session for next turn
+                    chatBox.innerHTML += `<p class="bot"><b>Bot:</b> ${data.reply}</p>`;
+                } else {
+                    chatBox.innerHTML += `<p style="color:red">Error: ${data.error || 'Unknown error'}</p>`;
+                }
+            } catch (err) {
+                console.error(err);
+                chatBox.innerHTML += `<p style="color:red">Failed to connect to server.</p>`;
+            }
+            
+            chatBox.scrollTop = chatBox.scrollHeight;
+        }
+    </script>
 </body>
 </html>
