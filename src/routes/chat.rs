@@ -53,7 +53,10 @@ pub async fn chat_handler(
 
         // Generate Downloadable Report
         if let Ok(url) = generate_html_report(&session_id, &next_data).await {
-            reply.push_str(&format!("\n\n📄 <a href='{}' target='_blank'>Download Project Report</a>", url));
+            reply.push_str(&format!(
+                "\n\n<a href='{}' target='_blank' style='display: inline-block; padding: 10px 20px; background-color: #0084ff; color: white; text-decoration: none; border-radius: 20px; font-weight: bold; margin-top: 5px;'>Download Report</a>", 
+                url
+            ));
         }
     }
     
