@@ -13,7 +13,7 @@ use crate::{
     },
     error::AppError,
 };
-use crate::services::report_generator::generate_html_report;
+use crate::services::report_generator::generate_pdf_report;
 use tokio::fs::{OpenOptions, read_to_string};
 use tokio::io::AsyncWriteExt;
 
@@ -52,9 +52,9 @@ pub async fn chat_handler(
         }
 
         // Generate Downloadable Report
-        if let Ok(url) = generate_html_report(&session_id, &next_data).await {
+        if let Ok(url) = generate_pdf_report(&session_id, &next_data).await {
             reply.push_str(&format!(
-                "\n\n<a href='{}' target='_blank' style='display: inline-block; padding: 10px 20px; background-color: #0084ff; color: white; text-decoration: none; border-radius: 20px; font-weight: bold; margin-top: 5px;'>Download Report</a>", 
+                "\n\n<a href='{}' target='_blank' style='display: inline-block; padding: 10px 20px; background-color: #0084ff; color: white; text-decoration: none; border-radius: 20px; font-weight: bold; margin-top: 5px;'>Download PDF Report</a>", 
                 url
             ));
         }
