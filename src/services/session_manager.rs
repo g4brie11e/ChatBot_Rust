@@ -6,8 +6,27 @@ use std::{
     time::{Duration, Instant},
 };
 
+use serde::{Deserialize, Serialize};
 use tokio::sync::RwLock;
 use uuid::Uuid;
+
+#[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
+pub enum ConversationState {
+    Idle,
+    AskingName,
+    AskingEmail,
+    AskingBudget,
+    AskingProjectDetails,
+}
+
+#[derive(Clone, Debug, Default, PartialEq, Serialize, Deserialize)]
+pub struct SessionData {
+    pub name: Option<String>,
+    pub email: Option<String>,
+    pub budget: Option<String>,
+    #[serde(default)]
+    pub detected_keywords: Vec<String>,
+}
 
 #[derive(Clone, Debug)]
 pub struct Message {
@@ -27,12 +46,20 @@ pub struct Session {
     pub id: String,
     pub messages: Vec<Message>,
     pub last_active: Instant,
+    pub state: ConversationState,
+    pub data: SessionData,
 }
 
 impl Session {
     pub fn new(id: impl Into<String>) -> Self {
         let now = Instant::now();
-        Self { id: id.into(), messages: Vec::new(), last_active: now }
+        Self { 
+            id: id.into(), 
+            messages: Vec::new(), 
+            last_active: now,
+            state: ConversationState::Idle,
+            data: SessionData::default(),
+        }
     }
 }
 
@@ -98,6 +125,35 @@ impl SessionManager {
         entry.messages.len()
     }
 
+    // Get the current conversation state
+    pub async fn get_state(&self, session_id: &str) -> ConversationState {
+        let guard = self.inner.read().await;
+        guard.get(session_id).map(|s| s.state.clone()).unwrap_or(ConversationState::Idle)
+    }
+
+    // Update the conversation state
+    pub async fn set_state(&self, session_id: &str, new_state: ConversationState) {
+        let mut guard = self.inner.write().await;
+        if let Some(session) = guard.get_mut(session_id) {
+            session.state = new_state;
+            session.last_active = Instant::now();
+        }
+    }
+
+    // Get the current session data
+    pub async fn get_data(&self, session_id: &str) -> SessionData {
+        let guard = self.inner.read().await;
+        guard.get(session_id).map(|s| s.data.clone()).unwrap_or_default()
+    }
+
+    // Update the session data
+    pub async fn set_data(&self, session_id: &str, data: SessionData) {
+        let mut guard = self.inner.write().await;
+        if let Some(session) = guard.get_mut(session_id) {
+            session.data = data;
+        }
+    }
+
     /// Get a copy of the session history
     pub async fn get_history(&self, session_id: &str) -> Option<Vec<Message>> {
         let guard = self.inner.read().await;
@@ -136,6 +192,7 @@ impl SessionManager {
 mod tests {
     use super::*;
     use std::time::Duration;
+    use tokio::time::sleep;
 
     #[tokio::test]
     async fn basic_session_flow() {
@@ -147,5 +204,19 @@ mod tests {
         let history = mgr.get_history(&sid).await.unwrap();
         assert_eq!(history.len(), 1);
         assert!(mgr.remove_session(&sid).await);
+    }
+
+    #[tokio::test]
+    async fn test_session_expiration() {
+        // Create a manager with a very short TTL (50ms)
+        let mgr = SessionManager::new(Duration::from_millis(50));
+        let sid = mgr.create_session().await;
+        
+        // Wait for expiration
+        sleep(Duration::from_millis(100)).await;
+        
+        let removed_count = mgr.purge_expired().await;
+        assert_eq!(removed_count, 1, "Should have removed 1 expired session");
+        assert!(!mgr.remove_session(&sid).await, "Session should already be gone");
     }
 }
