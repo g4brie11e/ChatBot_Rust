@@ -1,4 +1,6 @@
-use super::session_manager::{ConversationState, SessionData};
+use super::session_manager::{ConversationState, SessionData, Message, MessageRole};
+use serde::{Deserialize, Serialize};
+use std::env;
 
 #[derive(Debug, PartialEq)]
 pub enum Intent {
@@ -7,6 +9,7 @@ pub enum Intent {
     Pricing,
     Contact,
     Help,
+    Services,
     Unknown,
 }
 
@@ -23,6 +26,8 @@ pub fn detect_intent(msg: &str) -> Intent {
         Intent::Contact
     } else if msg_lower.contains("help") || msg_lower.contains("support") || msg_lower.contains("assist") {
         Intent::Help
+    } else if msg_lower.contains("service") || msg_lower.contains("offer") || msg_lower.contains("what do you do") {
+        Intent::Services
     } else {
         Intent::Unknown
     }
@@ -38,7 +43,29 @@ const KNOWLEDGE_BASE: &[&str] = &[
     "api", "database", "sql", "cloud" // Backend
 ];
 
-pub fn generate_reply(current_state: ConversationState, user_msg: &str, mut data: SessionData) -> (String, ConversationState, SessionData) {
+#[derive(Serialize)]
+struct MistralChatRequest {
+    model: String,
+    messages: Vec<MistralMessage>,
+}
+
+#[derive(Serialize, Deserialize, Debug)]
+struct MistralMessage {
+    role: String,
+    content: String,
+}
+
+#[derive(Deserialize, Debug)]
+struct MistralChatResponse {
+    choices: Vec<MistralChoice>,
+}
+
+#[derive(Deserialize, Debug)]
+struct MistralChoice {
+    message: MistralMessage,
+}
+
+pub async fn generate_reply(current_state: ConversationState, user_msg: &str, mut data: SessionData, history: Vec<Message>) -> (String, ConversationState, SessionData) {
     // 1. Continuous Learning: Analyze message for keywords
     let new_topics = extract_keywords(user_msg);
     for topic in new_topics {
@@ -64,6 +91,7 @@ pub fn generate_reply(current_state: ConversationState, user_msg: &str, mut data
             ConversationState::AskingEmail => "I am waiting for your email address.",
             ConversationState::AskingBudget => "I am waiting for your budget estimate.",
             ConversationState::AskingProjectDetails => "I am waiting for your project details.",
+            ConversationState::AskingProjectConfirmation => "I am waiting for confirmation to start a project inquiry.",
         };
         return (status_msg.to_string(), current_state, data);
     }
@@ -77,7 +105,7 @@ pub fn generate_reply(current_state: ConversationState, user_msg: &str, mut data
             Intent::Contact => {
                 // Avoid triggering contact info if the user is actually inputting their email
                 if current_state != ConversationState::AskingEmail {
-                    Some("You can reach us at contact@webagency.com.")
+                    Some("You can reach us at contact@webagency.com or call +1-555-0199.")
                 } else {
                     None
                 }
@@ -112,11 +140,11 @@ pub fn generate_reply(current_state: ConversationState, user_msg: &str, mut data
                 },
                 Intent::Pricing => (
                     "Our websites start at $1000. Would you like to start a project inquiry?".to_string(),
-                    ConversationState::Idle, // Could transition to AskingName if we added a Yes/No check
+                    ConversationState::AskingProjectConfirmation,
                     data
                 ),
                 Intent::Contact => (
-                    "You can reach us at contact@webagency.com.".to_string(),
+                    "You can reach us at contact@webagency.com or call +1-555-0199.".to_string(),
                     ConversationState::Idle,
                     data
                 ),
@@ -125,11 +153,18 @@ pub fn generate_reply(current_state: ConversationState, user_msg: &str, mut data
                     ConversationState::Idle,
                     data
                 ),
-                Intent::Unknown => (
-                    format!("I didn't quite catch that: '{}'. Try asking for a 'website' or 'price'.", user_msg),
+                Intent::Services => (
+                    "We offer Web Development, App Design, and SEO optimization.".to_string(),
                     ConversationState::Idle,
                     data
                 ),
+                Intent::Unknown => {
+                    if let Some(ai_reply) = call_mistral(&history).await {
+                        (ai_reply, ConversationState::Idle, data)
+                    } else {
+                        (format!("I didn't quite catch that: '{}'. Try asking for a 'website' or 'price'.", user_msg), ConversationState::Idle, data)
+                    }
+                },
             }
         }
         ConversationState::AskingName => {
@@ -174,6 +209,24 @@ pub fn generate_reply(current_state: ConversationState, user_msg: &str, mut data
             );
             (summary, ConversationState::Idle, data)
         }
+        ConversationState::AskingProjectConfirmation => {
+            let msg_lower = user_msg.trim().to_lowercase();
+            if msg_lower.contains("yes") || msg_lower.contains("sure") || msg_lower.contains("ok") || msg_lower.contains("yep") {
+                 // Reset data for new project
+                 data = SessionData::default();
+                 (
+                    "Great! To start, could you tell me your name?".to_string(),
+                    ConversationState::AskingName,
+                    data
+                 )
+            } else {
+                 (
+                    "Okay, no problem. Let me know if you need anything else.".to_string(),
+                    ConversationState::Idle,
+                    data
+                 )
+            }
+        }
     }
 }
 
@@ -183,6 +236,7 @@ fn get_reminder(state: &ConversationState) -> &str {
         ConversationState::AskingEmail => "Please provide your email address.",
         ConversationState::AskingBudget => "What is your estimated budget?",
         ConversationState::AskingProjectDetails => "Please briefly describe your project.",
+        ConversationState::AskingProjectConfirmation => "Would you like to start a project inquiry? (yes/no)",
         _ => "",
     }
 }
@@ -209,6 +263,63 @@ fn extract_keywords(text: &str) -> Vec<String> {
     found
 }
 
+async fn call_mistral(history: &[Message]) -> Option<String> {
+    let api_key = match env::var("MISTRAL_API_KEY") {
+        Ok(k) => k,
+        Err(_) => {
+            eprintln!("Error: MISTRAL_API_KEY environment variable is not set.");
+            return None;
+        }
+    };
+    
+    let client = reqwest::Client::new();
+    let mut messages = vec![
+        MistralMessage { role: "system".to_string(), content: "You are a helpful assistant for a web agency. Keep answers concise.".to_string() },
+    ];
+
+    // Limit history to last 10 messages to save tokens
+    let start_index = history.len().saturating_sub(10);
+    for msg in &history[start_index..] {
+        let role = match msg.role {
+            MessageRole::User => "user",
+            MessageRole::Bot => "assistant",
+        };
+        messages.push(MistralMessage { role: role.to_string(), content: msg.content.clone() });
+    }
+
+    let request_body = MistralChatRequest {
+        model: "mistral-tiny".to_string(),
+        messages,
+    };
+
+    let res = match client.post("https://api.mistral.ai/v1/chat/completions")
+        .header("Authorization", format!("Bearer {}", api_key))
+        .json(&request_body)
+        .send()
+        .await {
+            Ok(r) => r,
+            Err(e) => {
+                eprintln!("Error sending request to Mistral: {}", e);
+                return None;
+            }
+        };
+
+    if !res.status().is_success() {
+        eprintln!("Mistral API returned error: {}", res.status());
+        return None;
+    }
+
+    let chat_res = match res.json::<MistralChatResponse>().await {
+        Ok(r) => r,
+        Err(e) => {
+            eprintln!("Error parsing Mistral response: {}", e);
+            return None;
+        }
+    };
+
+    chat_res.choices.first().map(|c| c.message.content.clone())
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -220,57 +331,58 @@ mod tests {
         assert_eq!(detect_intent("What is the price?"), Intent::Pricing);
         assert_eq!(detect_intent("Give me your email"), Intent::Contact);
         assert_eq!(detect_intent("I need help"), Intent::Help);
+        assert_eq!(detect_intent("What services do you offer?"), Intent::Services);
         assert_eq!(detect_intent("random text"), Intent::Unknown);
     }
 
-    #[test]
-    fn test_conversation_flow() {
+    #[tokio::test]
+    async fn test_conversation_flow() {
         // 1. Start
         let mut data = SessionData::default();
-        let (reply, state, data) = generate_reply(ConversationState::Idle, "I want a web site", data);
+        let (reply, state, data) = generate_reply(ConversationState::Idle, "I want a web site", data, vec![]).await;
         assert_eq!(state, ConversationState::AskingName);
         assert!(reply.contains("name"));
 
         // 2. Provide Name
-        let (reply, state, data) = generate_reply(state, "John", data);
+        let (reply, state, data) = generate_reply(state, "John", data, vec![]).await;
         assert_eq!(state, ConversationState::AskingEmail);
         assert_eq!(data.name.as_deref(), Some("John"));
         assert!(reply.contains("John"));
         assert!(reply.contains("email"));
         
         // 3. Provide Email
-        let (reply, state, data) = generate_reply(state, "john@test.com", data);
+        let (reply, state, data) = generate_reply(state, "john@test.com", data, vec![]).await;
         assert_eq!(state, ConversationState::AskingBudget);
         assert_eq!(data.email.as_deref(), Some("john@test.com"));
         assert!(reply.contains("budget"));
 
         // 4. Provide Budget
-        let (reply, state, data) = generate_reply(state, "5000", data);
+        let (reply, state, data) = generate_reply(state, "5000", data, vec![]).await;
         assert_eq!(state, ConversationState::AskingProjectDetails);
         assert!(reply.contains("requirements"));
 
         // 5. Finish
-        let (reply, state, _data) = generate_reply(state, "I need a blog", data);
+        let (reply, state, _data) = generate_reply(state, "I need a blog", data, vec![]).await;
         assert_eq!(state, ConversationState::Idle);
         assert!(reply.contains("Thank you"));
         assert!(reply.contains("5000"));
     }
 
-    #[test]
-    fn test_interruption_logic() {
+    #[tokio::test]
+    async fn test_interruption_logic() {
         let mut data = SessionData::default();
         // 1. Start flow
-        let (reply, state, data) = generate_reply(ConversationState::Idle, "website", data);
+        let (reply, state, data) = generate_reply(ConversationState::Idle, "website", data, vec![]).await;
         assert_eq!(state, ConversationState::AskingName);
 
         // 2. Interrupt with pricing question
-        let (reply, state, data) = generate_reply(state, "what is the price?", data);
+        let (reply, state, data) = generate_reply(state, "what is the price?", data, vec![]).await;
         assert_eq!(state, ConversationState::AskingName); // State should not change
         assert!(reply.contains("$1000")); // Should answer question
         assert!(reply.contains("name")); // Should remind user
 
         // 3. Resume flow
-        let (reply, state, _) = generate_reply(state, "John", data);
+        let (reply, state, _) = generate_reply(state, "John", data, vec![]).await;
         assert_eq!(state, ConversationState::AskingEmail);
     }
 
@@ -283,11 +395,11 @@ mod tests {
         assert!(!is_valid_name("A"));      // Too short
     }
 
-    #[test]
-    fn test_keyword_extraction_and_report() {
+    #[tokio::test]
+    async fn test_keyword_extraction_and_report() {
         let mut data = SessionData::default();
         // User mentions "rust" and "api"
-        let (_, _, data) = generate_reply(ConversationState::Idle, "I need a Rust backend API", data);
+        let (_, _, data) = generate_reply(ConversationState::Idle, "I need a Rust backend API", data, vec![]).await;
         
         assert!(data.detected_keywords.contains(&"rust".to_string()));
         assert!(data.detected_keywords.contains(&"api".to_string()));

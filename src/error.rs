@@ -13,6 +13,7 @@ pub struct ErrorResponse {
 }
 
 #[derive(Debug, Error)]
+#[allow(dead_code)]
 pub enum AppError {
     #[error("Bad request: {0}")]
     BadRequest(String),

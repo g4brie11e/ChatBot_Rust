@@ -17,6 +17,7 @@ pub enum ConversationState {
     AskingEmail,
     AskingBudget,
     AskingProjectDetails,
+    AskingProjectConfirmation,
 }
 
 #[derive(Clone, Debug, Default, PartialEq, Serialize, Deserialize)]
@@ -32,6 +33,7 @@ pub struct SessionData {
 pub struct Message {
     pub role: MessageRole,
     pub content: String,
+    #[allow(dead_code)]
     pub timestamp: Instant,
 }
 
@@ -43,6 +45,7 @@ pub enum MessageRole {
 
 #[derive(Clone, Debug)]
 pub struct Session {
+    #[allow(dead_code)]
     pub id: String,
     pub messages: Vec<Message>,
     pub last_active: Instant,
@@ -161,6 +164,7 @@ impl SessionManager {
     }
 
     /// Remove a session by id
+    #[allow(dead_code)]
     pub async fn remove_session(&self, session_id: &str) -> bool {
         let mut guard = self.inner.write().await;
         guard.remove(session_id).is_some()
@@ -176,12 +180,14 @@ impl SessionManager {
     }
 
     /// Number of sessions 
+    #[allow(dead_code)]
     pub async fn len(&self) -> usize {
         let guard = self.inner.read().await;
         guard.len()
     }
 
     /// List session ids
+    #[allow(dead_code)]
     pub async fn list_session_ids(&self) -> Vec<String> {
         let guard = self.inner.read().await;
         guard.keys().cloned().collect()

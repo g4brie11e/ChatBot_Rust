@@ -1,9 +1,7 @@
 use axum::{
     extract::State,
-    routing::{get, post, get_service},
-    Json, Router,
+    Json,
 };
-use tower_http::services::ServeDir;
 use crate::{
     message::{ChatRequest, ChatResponse},
     state::SharedState,
@@ -41,8 +39,9 @@ pub async fn chat_handler(
     // Get current state
     let current_state = state.sessions.get_state(&session_id).await;
     let current_data = state.sessions.get_data(&session_id).await;
+    let history = state.sessions.get_history(&session_id).await.unwrap_or_default();
     
-    let (mut reply, next_state, next_data) = generate_reply(current_state.clone(), trimmed, current_data.clone());
+    let (mut reply, next_state, next_data) = generate_reply(current_state.clone(), trimmed, current_data.clone(), history).await;
 
     // Check if the flow just finished (Transition from AskingProjectDetails -> Idle)
     if current_state == ConversationState::AskingProjectDetails && next_state == ConversationState::Idle {
@@ -89,23 +88,16 @@ pub async fn get_leads_handler() -> Json<Vec<serde_json::Value>> {
     Json(leads)
 }
 
-pub fn create_router() -> Router<SharedState> {
-    Router::new()
-        .route("/chat", post(chat_handler))
-        .route("/health", get(|| async { "OK" }))
-        // Serve the `public/` folder at the root
-        .nest_service("/", get_service(ServeDir::new("public")).handle_error(|err| async move {
-            (
-                axum::http::StatusCode::INTERNAL_SERVER_ERROR,
-                format!("Erreur server: {}", err),
-            )
-        }))
-}
-
 #[cfg(test)]
 mod tests {
     use super::*;
     use crate::state::AppState;
+    use axum::{
+        routing::{get, post, get_service},
+        Router,
+    };
+    use tower_http::services::ServeDir;
+
     use std::sync::Arc;
     use std::time::Duration;
     use axum::body::Body;
@@ -113,6 +105,18 @@ mod tests {
     use tower::ServiceExt; // for oneshot
 
     #[tokio::test]
+    fn create_router() -> Router<SharedState> {
+        Router::new()
+            .route("/chat", post(chat_handler))
+            .route("/health", get(|| async { "OK" }))
+            .nest_service("/", get_service(ServeDir::new("public")).handle_error(|err| async move {
+                (
+                    axum::http::StatusCode::INTERNAL_SERVER_ERROR,
+                    format!("Erreur server: {}", err),
+                )
+            }))
+    }
+
     async fn test_chat_endpoint() {
         let state = Arc::new(AppState::new(Duration::from_secs(60)));
         // We use the router defined in this file for testing
