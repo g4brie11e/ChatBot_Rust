@@ -59,12 +59,15 @@ pub struct Session {
 impl Session {
     pub fn new(id: impl Into<String>) -> Self {
         let now = Instant::now();
-        Self { 
-            id: id.into(), 
-            messages: Vec::new(), 
+        Self {
+            id: id.into(),
+            messages: Vec::new(),
             last_active: now,
             state: ConversationState::AskingLanguage,
-            data: SessionData { language: "en".to_string(), ..Default::default() },
+            data: SessionData {
+                language: "en".to_string(),
+                ..Default::default()
+            },
         }
     }
 }
@@ -84,7 +87,6 @@ impl Debug for SessionManager {
 }
 
 impl SessionManager {
-    // Create a new manager 
     pub fn new(ttl: Duration) -> Self {
         Self {
             inner: Arc::new(RwLock::new(HashMap::new())),
@@ -92,7 +94,6 @@ impl SessionManager {
         }
     }
 
-    // Create a fresh session and return its id.
     pub async fn create_session(&self) -> String {
         let id = Uuid::new_v4().to_string();
         let session = Session::new(id.clone());
@@ -101,9 +102,7 @@ impl SessionManager {
         guard.insert(id.clone(), session);
         id
     }
-    
 
-    // Ensure there's a session with this id.
     pub async fn ensure_session(&self, id: &str) -> String {
         {
             let guard = self.inner.read().await;
@@ -119,10 +118,16 @@ impl SessionManager {
         id.to_string()
     }
 
-    // Append a message to a session's history and touch last_active.
-    pub async fn append_message(&self, session_id: &str, role: MessageRole, content: impl Into<String>) -> usize {
+    pub async fn append_message(
+        &self,
+        session_id: &str,
+        role: MessageRole,
+        content: impl Into<String>,
+    ) -> usize {
         let mut guard = self.inner.write().await;
-        let entry = guard.entry(session_id.to_string()).or_insert_with(|| Session::new(session_id.to_string()));
+        let entry = guard
+            .entry(session_id.to_string())
+            .or_insert_with(|| Session::new(session_id.to_string()));
         let msg = Message {
             role,
             content: content.into(),
@@ -133,13 +138,14 @@ impl SessionManager {
         entry.messages.len()
     }
 
-    // Get the current conversation state
     pub async fn get_state(&self, session_id: &str) -> ConversationState {
         let guard = self.inner.read().await;
-        guard.get(session_id).map(|s| s.state.clone()).unwrap_or(ConversationState::Idle)
+        guard
+            .get(session_id)
+            .map(|s| s.state.clone())
+            .unwrap_or(ConversationState::Idle)
     }
 
-    // Update the conversation state
     pub async fn set_state(&self, session_id: &str, new_state: ConversationState) {
         let mut guard = self.inner.write().await;
         if let Some(session) = guard.get_mut(session_id) {
@@ -148,13 +154,14 @@ impl SessionManager {
         }
     }
 
-    // Get the current session data
     pub async fn get_data(&self, session_id: &str) -> SessionData {
         let guard = self.inner.read().await;
-        guard.get(session_id).map(|s| s.data.clone()).unwrap_or_default()
+        guard
+            .get(session_id)
+            .map(|s| s.data.clone())
+            .unwrap_or_default()
     }
 
-    // Update the session data
     pub async fn set_data(&self, session_id: &str, data: SessionData) {
         let mut guard = self.inner.write().await;
         if let Some(session) = guard.get_mut(session_id) {
@@ -162,12 +169,14 @@ impl SessionManager {
         }
     }
 
-    /// Get a copy of the session history
     pub async fn get_history(&self, session_id: &str) -> Option<Vec<Message>> {
         let guard = self.inner.read().await;
         guard.get(session_id).map(|s| s.messages.clone())
     }
 
+    // We allow dead code for this method to facilitate
+    // future administrative extensions (like an admin dashboard) and to ensure
+    // the SessionManager API is complete, even if not currently used by the app.
     /// Remove a session by id
     #[allow(dead_code)]
     pub async fn remove_session(&self, session_id: &str) -> bool {
@@ -175,7 +184,6 @@ impl SessionManager {
         guard.remove(session_id).is_some()
     }
 
-    /// Remove sessions idle longer than ttl. Returns number removed.
     pub async fn purge_expired(&self) -> usize {
         let mut guard = self.inner.write().await;
         let now = Instant::now();
@@ -184,11 +192,18 @@ impl SessionManager {
         before - guard.len()
     }
 
-    /// Number of sessions 
+    /// Number of sessions
     #[allow(dead_code)]
     pub async fn len(&self) -> usize {
         let guard = self.inner.read().await;
         guard.len()
+    }
+
+    /// Returns true if the session manager is empty.
+    #[allow(dead_code)]
+    pub async fn is_empty(&self) -> bool {
+        let guard = self.inner.read().await;
+        guard.is_empty()
     }
 
     /// List session ids

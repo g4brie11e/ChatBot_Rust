@@ -1,7 +1,7 @@
+use serde::Serialize;
 use std::collections::HashMap;
 use std::sync::Arc;
 use tokio::sync::RwLock;
-use serde::Serialize;
 
 #[derive(Debug, Default, Clone, Serialize)]
 pub struct MetricsData {
@@ -12,6 +12,12 @@ pub struct MetricsData {
 #[derive(Debug, Clone)]
 pub struct MetricsManager {
     inner: Arc<RwLock<MetricsData>>,
+}
+
+impl Default for MetricsManager {
+    fn default() -> Self {
+        Self::new()
+    }
 }
 
 impl MetricsManager {

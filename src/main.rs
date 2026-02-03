@@ -5,8 +5,8 @@ use std::sync::Arc;
 use std::time::Duration;
 use tokio::time;
 
-use chatbot_backend::state::AppState;
 use chatbot_backend::routes;
+use chatbot_backend::state::AppState;
 
 #[tokio::main]
 async fn main() {
@@ -29,18 +29,19 @@ async fn main() {
         });
     }
 
-    let app = routes::create_router()
-        .with_state(state.clone());
+    let app = routes::create_router().with_state(state.clone());
 
     let port = env::var("PORT").unwrap_or_else(|_| "3000".to_string());
     let addr_str = format!("0.0.0.0:{}", port);
     let addr: SocketAddr = addr_str.parse().expect("Invalid address");
     tracing::info!("listening on {}", addr);
 
-    let listener = tokio::net::TcpListener::bind(addr).await.unwrap_or_else(|e| {
-        eprintln!("Error: Could not bind to address {}: {}", addr, e);
-        std::process::exit(1);
-    });
+    let listener = tokio::net::TcpListener::bind(addr)
+        .await
+        .unwrap_or_else(|e| {
+            eprintln!("Error: Could not bind to address {}: {}", addr, e);
+            std::process::exit(1);
+        });
 
     axum::serve(listener, app)
         .with_graceful_shutdown(shutdown_signal())

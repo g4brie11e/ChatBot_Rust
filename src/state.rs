@@ -2,8 +2,8 @@
 use std::sync::Arc;
 use std::time::Duration;
 
-use crate::services::session_manager::SessionManager;
 use crate::services::metrics_manager::MetricsManager;
+use crate::services::session_manager::SessionManager;
 
 pub type SharedState = Arc<AppState>;
 

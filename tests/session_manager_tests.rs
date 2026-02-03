@@ -1,4 +1,6 @@
-use chatbot_backend::services::session_manager::{SessionManager, MessageRole, ConversationState, SessionData};
+use chatbot_backend::services::session_manager::{
+    ConversationState, MessageRole, SessionData, SessionManager,
+};
 use std::time::Duration;
 use tokio::time::sleep;
 
@@ -16,16 +18,19 @@ async fn basic_session_flow() {
 
 #[tokio::test]
 async fn test_session_expiration() {
-    // Create a manager with a very short TTL (10ms)
+
     let mgr = SessionManager::new(Duration::from_millis(10));
     let sid = mgr.create_session().await;
-    
+
     // Wait for expiration
     sleep(Duration::from_millis(20)).await;
-    
+
     let removed_count = mgr.purge_expired().await;
     assert_eq!(removed_count, 1, "Should have removed 1 expired session");
-    assert!(!mgr.remove_session(&sid).await, "Session should already be gone");
+    assert!(
+        !mgr.remove_session(&sid).await,
+        "Session should already be gone"
+    );
 }
 
 #[tokio::test]
@@ -39,7 +44,10 @@ async fn test_state_and_data_persistence() {
     assert_eq!(mgr.get_state(&sid).await, ConversationState::AskingName);
 
     // Test Data
-    let data = SessionData { name: Some("Test".to_string()), ..Default::default() };
+    let data = SessionData {
+        name: Some("Test".to_string()),
+        ..Default::default()
+    };
     mgr.set_data(&sid, data.clone()).await;
     let retrieved = mgr.get_data(&sid).await;
     assert_eq!(retrieved.name, Some("Test".to_string()));
