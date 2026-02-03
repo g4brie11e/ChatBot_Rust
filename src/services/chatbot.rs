@@ -1,4 +1,5 @@
 use super::session_manager::{ConversationState, SessionData, Message, MessageRole};
+use super::metrics_manager::MetricsManager;
 use serde::{Deserialize, Serialize};
 use std::env;
 
@@ -72,11 +73,14 @@ struct MistralChoice {
     message: MistralMessage,
 }
 
-pub async fn generate_reply(current_state: ConversationState, user_msg: &str, mut data: SessionData, history: Vec<Message>) -> (String, ConversationState, SessionData) {
+pub async fn generate_reply(current_state: ConversationState, user_msg: &str, mut data: SessionData, history: Vec<Message>, metrics: &MetricsManager) -> (String, ConversationState, SessionData) {
     // 0. Language Inference: Attempt to detect language change on every message
     if let Some(lang) = infer_language(user_msg) {
         data.language = lang;
     }
+    
+    // Track language usage
+    metrics.increment_language(&data.language).await;
 
     // 1. Continuous Learning: Analyze message for keywords
     let new_topics = extract_keywords(user_msg);
@@ -113,6 +117,14 @@ pub async fn generate_reply(current_state: ConversationState, user_msg: &str, mu
     // If the user asks a FAQ question while we are in a flow, answer it but stay in the flow.
     if current_state != ConversationState::Idle {
         let intent = detect_intent(user_msg);
+        match intent {
+            Intent::Pricing | Intent::Contact | Intent::Help => {
+                // Track interruption intents
+                metrics.increment_intent(&format!("{:?}", intent)).await;
+            }
+            _ => {}
+        }
+        
         let interruption_reply = match intent {
             Intent::Pricing => Some(get_localized_msg("pricing_info", &data.language)),
             Intent::Contact => {
@@ -157,6 +169,7 @@ pub async fn generate_reply(current_state: ConversationState, user_msg: &str, mu
         }
         ConversationState::Idle => {
             let intent = detect_intent(user_msg);
+            metrics.increment_intent(&format!("{:?}", intent)).await;
             match intent {
                 Intent::Greeting => (
                     get_localized_msg("greeting", &data.language),

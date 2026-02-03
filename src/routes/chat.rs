@@ -11,6 +11,7 @@ use crate::{
     },
     error::AppError,
 };
+use crate::services::metrics_manager::MetricsData;
 use crate::services::report_generator::generate_pdf_report;
 use tokio::fs::{OpenOptions, read_to_string};
 use tokio::io::AsyncWriteExt;
@@ -41,7 +42,7 @@ pub async fn chat_handler(
     let current_data = state.sessions.get_data(&session_id).await;
     let history = state.sessions.get_history(&session_id).await.unwrap_or_default();
     
-    let (mut reply, next_state, next_data) = generate_reply(current_state.clone(), trimmed, current_data.clone(), history).await;
+    let (mut reply, next_state, next_data) = generate_reply(current_state.clone(), trimmed, current_data.clone(), history, &state.metrics).await;
 
     // Check if the flow just finished (Transition from AskingProjectDetails -> Idle)
     if current_state == ConversationState::AskingProjectDetails && next_state == ConversationState::Idle {
@@ -86,4 +87,9 @@ pub async fn get_leads_handler() -> Json<Vec<serde_json::Value>> {
         .filter_map(|line| serde_json::from_str(line).ok())
         .collect();
     Json(leads)
+}
+
+// New Handler: Get Metrics
+pub async fn get_metrics_handler(State(state): State<SharedState>) -> Json<MetricsData> {
+    Json(state.metrics.get_metrics().await)
 }

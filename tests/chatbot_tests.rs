@@ -1,5 +1,6 @@
 use chatbot_backend::services::chatbot::{generate_reply, detect_intent, Intent, is_valid_name};
 use chatbot_backend::services::session_manager::{ConversationState, SessionData, Message, MessageRole};
+use chatbot_backend::services::metrics_manager::MetricsManager;
 use std::time::Instant;
 
 #[test]
@@ -17,30 +18,31 @@ fn test_detect_intent() {
 async fn test_conversation_flow() {
     // 1. Start
     let data = SessionData::default();
-    let (reply, state, data) = generate_reply(ConversationState::Idle, "I want a web site", data, vec![]).await;
+    let metrics = MetricsManager::new();
+    let (reply, state, data) = generate_reply(ConversationState::Idle, "I want a web site", data, vec![], &metrics).await;
     assert_eq!(state, ConversationState::AskingName);
     assert!(reply.contains("name"));
 
     // 2. Provide Name
-    let (reply, state, data) = generate_reply(state, "John", data, vec![]).await;
+    let (reply, state, data) = generate_reply(state, "John", data, vec![], &metrics).await;
     assert_eq!(state, ConversationState::AskingEmail);
     assert_eq!(data.name.as_deref(), Some("John"));
     assert!(reply.contains("John"));
     assert!(reply.contains("email"));
     
     // 3. Provide Email
-    let (reply, state, data) = generate_reply(state, "john@test.com", data, vec![]).await;
+    let (reply, state, data) = generate_reply(state, "john@test.com", data, vec![], &metrics).await;
     assert_eq!(state, ConversationState::AskingBudget);
     assert_eq!(data.email.as_deref(), Some("john@test.com"));
     assert!(reply.contains("budget"));
 
     // 4. Provide Budget
-    let (reply, state, data) = generate_reply(state, "5000", data, vec![]).await;
+    let (reply, state, data) = generate_reply(state, "5000", data, vec![], &metrics).await;
     assert_eq!(state, ConversationState::AskingProjectDetails);
     assert!(reply.contains("requirements"));
 
     // 5. Finish
-    let (reply, state, _data) = generate_reply(state, "I need a blog", data, vec![]).await;
+    let (reply, state, _data) = generate_reply(state, "I need a blog", data, vec![], &metrics).await;
     assert_eq!(state, ConversationState::Idle);
     assert!(reply.contains("REPORT GENERATED"));
     assert!(reply.contains("5000"));
@@ -49,18 +51,19 @@ async fn test_conversation_flow() {
 #[tokio::test]
 async fn test_interruption_logic() {
     let data = SessionData::default();
+    let metrics = MetricsManager::new();
     // 1. Start flow
-    let (_reply, state, data) = generate_reply(ConversationState::Idle, "website", data, vec![]).await;
+    let (_reply, state, data) = generate_reply(ConversationState::Idle, "website", data, vec![], &metrics).await;
     assert_eq!(state, ConversationState::AskingName);
 
     // 2. Interrupt with pricing question
-    let (reply, state, data) = generate_reply(state, "what is the price?", data, vec![]).await;
+    let (reply, state, data) = generate_reply(state, "what is the price?", data, vec![], &metrics).await;
     assert_eq!(state, ConversationState::AskingName); // State should not change
     assert!(reply.contains("$1000")); // Should answer question
     assert!(reply.contains("name")); // Should remind user
 
     // 3. Resume flow
-    let (_reply, state, _) = generate_reply(state, "John", data, vec![]).await;
+    let (_reply, state, _) = generate_reply(state, "John", data, vec![], &metrics).await;
     assert_eq!(state, ConversationState::AskingEmail);
 }
 
@@ -76,8 +79,9 @@ fn test_name_validation() {
 #[tokio::test]
 async fn test_keyword_extraction_and_report() {
     let data = SessionData::default();
+    let metrics = MetricsManager::new();
     // User mentions "rust" and "api"
-    let (_, _, data) = generate_reply(ConversationState::Idle, "I need a Rust backend API", data, vec![]).await;
+    let (_, _, data) = generate_reply(ConversationState::Idle, "I need a Rust backend API", data, vec![], &metrics).await;
     
     assert!(data.detected_keywords.contains(&"rust".to_string()));
     assert!(data.detected_keywords.contains(&"api".to_string()));
@@ -87,13 +91,14 @@ async fn test_keyword_extraction_and_report() {
 #[tokio::test]
 async fn test_project_confirmation_flow() {
     let data = SessionData::default();
+    let metrics = MetricsManager::new();
     // 1. Ask for price
-    let (reply, state, data) = generate_reply(ConversationState::Idle, "price", data, vec![]).await;
+    let (reply, state, data) = generate_reply(ConversationState::Idle, "price", data, vec![], &metrics).await;
     assert_eq!(state, ConversationState::AskingProjectConfirmation);
     assert!(reply.contains("start a project inquiry"));
 
     // 2. Say Yes
-    let (reply, state, _) = generate_reply(state, "yes", data, vec![]).await;
+    let (reply, state, _) = generate_reply(state, "yes", data, vec![], &metrics).await;
     assert_eq!(state, ConversationState::AskingName);
     assert!(reply.contains("name"));
 }
@@ -101,7 +106,8 @@ async fn test_project_confirmation_flow() {
 #[tokio::test]
 async fn test_services_intent() {
     let data = SessionData::default();
-    let (reply, state, _) = generate_reply(ConversationState::Idle, "what services do you offer?", data, vec![]).await;
+    let metrics = MetricsManager::new();
+    let (reply, state, _) = generate_reply(ConversationState::Idle, "what services do you offer?", data, vec![], &metrics).await;
     assert_eq!(state, ConversationState::Idle);
     assert!(reply.contains("Web Development"));
 }
@@ -110,10 +116,11 @@ async fn test_services_intent() {
 async fn test_classic_and_ai_response() {
     dotenvy::dotenv().ok();
     let data = SessionData::default();
+    let metrics = MetricsManager::new();
     
     // 1. Test Classic Response (Rule-based)
     // "help" is a known intent
-    let (reply, state, _) = generate_reply(ConversationState::Idle, "help", data.clone(), vec![]).await;
+    let (reply, state, _) = generate_reply(ConversationState::Idle, "help", data.clone(), vec![], &metrics).await;
     assert_eq!(state, ConversationState::Idle);
     assert!(reply.contains("pricing, contact info"));
 
@@ -125,7 +132,7 @@ async fn test_classic_and_ai_response() {
         content: question.to_string(),
         timestamp: Instant::now(),
     }];
-    let (reply, _state, _) = generate_reply(ConversationState::Idle, question, data, history).await;
+    let (reply, _state, _) = generate_reply(ConversationState::Idle, question, data, history, &metrics).await;
     
     // We check behavior based on API Key presence
     let reply_lower = reply.to_lowercase();
@@ -138,7 +145,8 @@ async fn test_classic_and_ai_response() {
 #[tokio::test]
 async fn test_language_switching_spanish() {
     let data = SessionData::default();
-    let (reply, state, data) = generate_reply(ConversationState::Idle, "hola", data, vec![]).await;
+    let metrics = MetricsManager::new();
+    let (reply, state, data) = generate_reply(ConversationState::Idle, "hola", data, vec![], &metrics).await;
     assert_eq!(state, ConversationState::Idle);
     assert_eq!(data.language, "es");
     assert!(reply.contains("Hola"));
@@ -147,15 +155,16 @@ async fn test_language_switching_spanish() {
 #[tokio::test]
 async fn test_language_switching_polish_keyword() {
     let data = SessionData::default();
+    let metrics = MetricsManager::new();
     
     // 1. Say "cześć" (Greeting) -> Should switch to PL
-    let (reply, state, data) = generate_reply(ConversationState::Idle, "cześć", data, vec![]).await;
+    let (reply, state, data) = generate_reply(ConversationState::Idle, "cześć", data, vec![], &metrics).await;
     assert_eq!(state, ConversationState::Idle);
     assert_eq!(data.language, "pl");
     assert!(reply.contains("Cześć"));
 
     // 2. Say "strona" (Website) -> Should continue in PL
-    let (reply, state, data) = generate_reply(state, "strona", data, vec![]).await;
+    let (reply, state, data) = generate_reply(state, "strona", data, vec![], &metrics).await;
     assert_eq!(state, ConversationState::AskingName);
     assert_eq!(data.language, "pl");
     assert!(reply.contains("Chętnie pomożemy"));
@@ -164,8 +173,24 @@ async fn test_language_switching_polish_keyword() {
 #[tokio::test]
 async fn test_language_switching_french() {
     let data = SessionData::default();
-    let (reply, state, data) = generate_reply(ConversationState::Idle, "bonjour", data, vec![]).await;
+    let metrics = MetricsManager::new();
+    let (reply, state, data) = generate_reply(ConversationState::Idle, "bonjour", data, vec![], &metrics).await;
     assert_eq!(state, ConversationState::Idle);
     assert_eq!(data.language, "fr");
     assert!(reply.contains("Bonjour"));
+}
+
+#[tokio::test]
+async fn test_metrics_increment() {
+    let data = SessionData::default();
+    let metrics = MetricsManager::new();
+    
+    // 1. Trigger "Pricing" intent
+    // "price" triggers Intent::Pricing and language "en"
+    let (_reply, _state, _data) = generate_reply(ConversationState::Idle, "price", data.clone(), vec![], &metrics).await;
+    
+    let metrics_data = metrics.get_metrics().await;
+    
+    assert_eq!(metrics_data.intent_usage.get("Pricing"), Some(&1));
+    assert_eq!(metrics_data.language_usage.get("en"), Some(&1));
 }
