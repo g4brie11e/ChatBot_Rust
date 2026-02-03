@@ -2,6 +2,7 @@ use super::session_manager::{ConversationState, SessionData, Message, MessageRol
 use super::metrics_manager::MetricsManager;
 use serde::{Deserialize, Serialize};
 use std::env;
+use tracing::error;
 
 #[derive(Debug, PartialEq)]
 pub enum Intent {
@@ -423,7 +424,7 @@ async fn call_mistral(history: &[Message]) -> Option<String> {
     let api_key = match env::var("MISTRAL_API_KEY") {
         Ok(k) => k,
         Err(_) => {
-            eprintln!("Error: MISTRAL_API_KEY environment variable is not set.");
+            error!("MISTRAL_API_KEY environment variable is not set.");
             return None;
         }
     };
@@ -455,20 +456,20 @@ async fn call_mistral(history: &[Message]) -> Option<String> {
         .await {
             Ok(r) => r,
             Err(e) => {
-                eprintln!("Error sending request to Mistral: {}", e);
+                error!("Error sending request to Mistral: {}", e);
                 return None;
             }
         };
 
     if !res.status().is_success() {
-        eprintln!("Mistral API returned error: {}", res.status());
+        error!("Mistral API returned error: {}", res.status());
         return None;
     }
 
     let chat_res = match res.json::<MistralChatResponse>().await {
         Ok(r) => r,
         Err(e) => {
-            eprintln!("Error parsing Mistral response: {}", e);
+            error!("Error parsing Mistral response: {}", e);
             return None;
         }
     };

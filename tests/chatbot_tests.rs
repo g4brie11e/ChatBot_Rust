@@ -16,21 +16,21 @@ fn test_detect_intent() {
 
 #[tokio::test]
 async fn test_conversation_flow() {
-    // 1. Start
+    // Start
     let data = SessionData::default();
     let metrics = MetricsManager::new();
     let (reply, state, data) = generate_reply(ConversationState::Idle, "I want a web site", data, vec![], &metrics).await;
     assert_eq!(state, ConversationState::AskingName);
     assert!(reply.contains("name"));
 
-    // 2. Provide Name
+    // Name
     let (reply, state, data) = generate_reply(state, "John", data, vec![], &metrics).await;
     assert_eq!(state, ConversationState::AskingEmail);
     assert_eq!(data.name.as_deref(), Some("John"));
     assert!(reply.contains("John"));
     assert!(reply.contains("email"));
     
-    // 3. Provide Email
+    // Email
     let (reply, state, data) = generate_reply(state, "john@test.com", data, vec![], &metrics).await;
     assert_eq!(state, ConversationState::AskingBudget);
     assert_eq!(data.email.as_deref(), Some("john@test.com"));

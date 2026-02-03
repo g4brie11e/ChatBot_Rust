@@ -112,8 +112,10 @@ impl SessionManager {
             }
         }
         let mut guard = self.inner.write().await;
-        let session = Session::new(id.to_string());
-        guard.insert(id.to_string(), session);
+        if !guard.contains_key(id) {
+            let session = Session::new(id.to_string());
+            guard.insert(id.to_string(), session);
+        }
         id.to_string()
     }
 
