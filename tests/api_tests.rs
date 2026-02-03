@@ -6,7 +6,7 @@ use axum::body::Body;
 use axum::http::{Request, StatusCode};
 use std::sync::Arc;
 use std::time::Duration;
-use tower::util::ServiceExt; 
+use tower::util::ServiceExt;
 
 #[tokio::test]
 async fn test_chat_endpoint() {
@@ -70,7 +70,7 @@ async fn test_stateful_flow_integration() {
 
     assert!(chat_resp.reply.contains("name")); // Bot should ask for name
 
-    // User sends Name 
+    // User sends Name
     let req = Request::builder()
         .method("POST")
         .uri("/chat")

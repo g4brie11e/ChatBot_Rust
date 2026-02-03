@@ -29,7 +29,7 @@ pub fn create_router() -> Router<SharedState> {
 }
 
 async fn auth_middleware(req: Request, next: Next) -> Result<Response, StatusCode> {
-    // API Key check. 
+    // API Key check.
     match req.headers().get("x-admin-key") {
         Some(val) if val == "secret123" => Ok(next.run(req).await),
         _ => Err(StatusCode::UNAUTHORIZED),

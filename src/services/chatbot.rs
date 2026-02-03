@@ -57,32 +57,32 @@ const KNOWLEDGE_BASE: &[&str] = &[
     "shop",
     "blog",
     // Tech
-    "landing", 
+    "landing",
     "rust",
     "python",
     "javascript",
     "react",
     "vue",
-    "node", 
+    "node",
     // Design
     "design",
     "ui",
     "ux",
-    "logo", 
+    "logo",
     "seo",
     // Marketing
     "marketing",
-    "ads", 
+    "ads",
     // Mobile
     "mobile",
     "app",
     "ios",
-    "android", 
+    "android",
     // Backend
     "api",
     "database",
     "sql",
-    "cloud", 
+    "cloud",
 ];
 
 #[derive(Serialize)]
@@ -142,7 +142,7 @@ pub async fn generate_reply(
         );
     }
 
-    // Global status command 
+    // Global status command
     if user_msg.trim().eq_ignore_ascii_case("status") {
         let status_msg = match current_state {
             ConversationState::AskingLanguage => "I am waiting for you to select a language.",
@@ -158,7 +158,7 @@ pub async fn generate_reply(
         return (status_msg.to_string(), current_state, data);
     }
 
-    // Context-Aware Interruptions 
+    // Context-Aware Interruptions
     // If the user asks a FAQ question while we are in a flow, answer it but stay in the flow.
     if current_state != ConversationState::Idle {
         let intent = detect_intent(user_msg);
@@ -450,11 +450,11 @@ fn infer_language(msg: &str) -> Option<String> {
         return Some("es".to_string());
     }
     // French
-    if msg_lower.contains("bonjour") 
-        || msg_lower.contains("aide") 
-        || msg_lower.contains("site web") 
-        || msg_lower.contains("contact") 
-        || msg_lower.contains("prix") 
+    if msg_lower.contains("bonjour")
+        || msg_lower.contains("aide")
+        || msg_lower.contains("site web")
+        || msg_lower.contains("contact")
+        || msg_lower.contains("prix")
         || msg_lower.contains("services")
     {
         return Some("fr".to_string());

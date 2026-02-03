@@ -15,7 +15,7 @@ pub async fn generate_pdf_report(session_id: &str, data: &SessionData) -> std::i
     let session_id = session_id.to_string();
     let file_path_clone = file_path.clone();
 
-    // Run PDF generation in a blocking task 
+    // Run PDF generation in a blocking task
     tokio::task::spawn_blocking(move || {
         let (doc, page1, layer1) =
             PdfDocument::new("Project Report", Mm(210.0), Mm(297.0), "Layer 1");

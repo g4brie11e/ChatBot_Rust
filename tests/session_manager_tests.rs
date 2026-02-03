@@ -18,7 +18,6 @@ async fn basic_session_flow() {
 
 #[tokio::test]
 async fn test_session_expiration() {
-
     let mgr = SessionManager::new(Duration::from_millis(10));
     let sid = mgr.create_session().await;
 

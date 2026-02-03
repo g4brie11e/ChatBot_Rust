@@ -21,7 +21,6 @@ fn test_detect_intent() {
 
 #[tokio::test]
 async fn test_conversation_flow() {
-
     let data = SessionData::default();
     let metrics = MetricsManager::new();
     let (reply, state, data) = generate_reply(
@@ -73,7 +72,7 @@ async fn test_interruption_logic() {
     // Interrupt with pricing question
     let (reply, state, data) =
         generate_reply(state, "what is the price?", data, vec![], &metrics).await;
-    assert_eq!(state, ConversationState::AskingName); 
+    assert_eq!(state, ConversationState::AskingName);
     assert!(reply.contains("$1000")); // Should answer 
     assert!(reply.contains("name")); // Should remind user to give the name 
 
@@ -87,9 +86,9 @@ fn test_name_validation() {
     assert!(is_valid_name("John Doe"));
     assert!(is_valid_name("Jean-Pierre"));
     // Contains numbers
-    assert!(!is_valid_name("User123")); 
+    assert!(!is_valid_name("User123"));
     // Empty
-    assert!(!is_valid_name("")); 
+    assert!(!is_valid_name(""));
     // Too short
     assert!(!is_valid_name("A"));
 }
@@ -149,7 +148,7 @@ async fn test_classic_and_ai_response() {
     let data = SessionData::default();
     let metrics = MetricsManager::new();
 
-    // Test Classic Response 
+    // Test Classic Response
     let (reply, state, _) = generate_reply(
         ConversationState::Idle,
         "help",
@@ -163,7 +162,7 @@ async fn test_classic_and_ai_response() {
 
     // Test AI Response (Fallback for unknown intent)
     // "What is the capital of France?" is NOT a known intent, so it goes to Mistral AI
-    let question = "Capital of France?"; 
+    let question = "Capital of France?";
     let history = vec![Message {
         role: MessageRole::User,
         content: question.to_string(),
