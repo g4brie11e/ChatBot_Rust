@@ -193,36 +193,3 @@ impl SessionManager {
         guard.keys().cloned().collect()
     }
 }
-
-#[cfg(test)]
-mod tests {
-    use super::*;
-    use std::time::Duration;
-    use tokio::time::sleep;
-
-    #[tokio::test]
-    async fn basic_session_flow() {
-        let mgr = SessionManager::new(Duration::from_secs(60));
-        let sid = mgr.create_session().await;
-        assert!(!sid.is_empty());
-        let len = mgr.append_message(&sid, MessageRole::User, "hello").await;
-        assert_eq!(len, 1);
-        let history = mgr.get_history(&sid).await.unwrap();
-        assert_eq!(history.len(), 1);
-        assert!(mgr.remove_session(&sid).await);
-    }
-
-    #[tokio::test]
-    async fn test_session_expiration() {
-        // Create a manager with a very short TTL (50ms)
-        let mgr = SessionManager::new(Duration::from_millis(50));
-        let sid = mgr.create_session().await;
-        
-        // Wait for expiration
-        sleep(Duration::from_millis(100)).await;
-        
-        let removed_count = mgr.purge_expired().await;
-        assert_eq!(removed_count, 1, "Should have removed 1 expired session");
-        assert!(!mgr.remove_session(&sid).await, "Session should already be gone");
-    }
-}

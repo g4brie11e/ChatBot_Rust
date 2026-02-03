@@ -18,7 +18,7 @@ pub fn detect_intent(msg: &str) -> Intent {
 
     if msg_lower.contains("hello") || msg_lower.contains("hi") || msg_lower.contains("hey") {
         Intent::Greeting
-    } else if msg_lower.contains("web site") || msg_lower.contains("e-commerce") {
+    } else if msg_lower.contains("web site") || msg_lower.contains("website") || msg_lower.contains("e-commerce") {
         Intent::WebsiteRequest
     } else if msg_lower.contains("price") || msg_lower.contains("cost") || msg_lower.contains("quote") {
         Intent::Pricing
@@ -241,7 +241,7 @@ fn get_reminder(state: &ConversationState) -> &str {
     }
 }
 
-fn is_valid_name(name: &str) -> bool {
+pub fn is_valid_name(name: &str) -> bool {
     !name.is_empty()
         && name.len() > 1
         && name.chars().all(|c| c.is_alphabetic() || c.is_whitespace() || c == '-' || c == '\'')
@@ -318,91 +318,4 @@ async fn call_mistral(history: &[Message]) -> Option<String> {
     };
 
     chat_res.choices.first().map(|c| c.message.content.clone())
-}
-
-#[cfg(test)]
-mod tests {
-    use super::*;
-
-    #[test]
-    fn test_detect_intent() {
-        assert_eq!(detect_intent("Hello there"), Intent::Greeting);
-        assert_eq!(detect_intent("I want a web site"), Intent::WebsiteRequest);
-        assert_eq!(detect_intent("What is the price?"), Intent::Pricing);
-        assert_eq!(detect_intent("Give me your email"), Intent::Contact);
-        assert_eq!(detect_intent("I need help"), Intent::Help);
-        assert_eq!(detect_intent("What services do you offer?"), Intent::Services);
-        assert_eq!(detect_intent("random text"), Intent::Unknown);
-    }
-
-    #[tokio::test]
-    async fn test_conversation_flow() {
-        // 1. Start
-        let mut data = SessionData::default();
-        let (reply, state, data) = generate_reply(ConversationState::Idle, "I want a web site", data, vec![]).await;
-        assert_eq!(state, ConversationState::AskingName);
-        assert!(reply.contains("name"));
-
-        // 2. Provide Name
-        let (reply, state, data) = generate_reply(state, "John", data, vec![]).await;
-        assert_eq!(state, ConversationState::AskingEmail);
-        assert_eq!(data.name.as_deref(), Some("John"));
-        assert!(reply.contains("John"));
-        assert!(reply.contains("email"));
-        
-        // 3. Provide Email
-        let (reply, state, data) = generate_reply(state, "john@test.com", data, vec![]).await;
-        assert_eq!(state, ConversationState::AskingBudget);
-        assert_eq!(data.email.as_deref(), Some("john@test.com"));
-        assert!(reply.contains("budget"));
-
-        // 4. Provide Budget
-        let (reply, state, data) = generate_reply(state, "5000", data, vec![]).await;
-        assert_eq!(state, ConversationState::AskingProjectDetails);
-        assert!(reply.contains("requirements"));
-
-        // 5. Finish
-        let (reply, state, _data) = generate_reply(state, "I need a blog", data, vec![]).await;
-        assert_eq!(state, ConversationState::Idle);
-        assert!(reply.contains("Thank you"));
-        assert!(reply.contains("5000"));
-    }
-
-    #[tokio::test]
-    async fn test_interruption_logic() {
-        let mut data = SessionData::default();
-        // 1. Start flow
-        let (reply, state, data) = generate_reply(ConversationState::Idle, "website", data, vec![]).await;
-        assert_eq!(state, ConversationState::AskingName);
-
-        // 2. Interrupt with pricing question
-        let (reply, state, data) = generate_reply(state, "what is the price?", data, vec![]).await;
-        assert_eq!(state, ConversationState::AskingName); // State should not change
-        assert!(reply.contains("$1000")); // Should answer question
-        assert!(reply.contains("name")); // Should remind user
-
-        // 3. Resume flow
-        let (reply, state, _) = generate_reply(state, "John", data, vec![]).await;
-        assert_eq!(state, ConversationState::AskingEmail);
-    }
-
-    #[test]
-    fn test_name_validation() {
-        assert!(is_valid_name("John Doe"));
-        assert!(is_valid_name("Jean-Pierre"));
-        assert!(!is_valid_name("User123")); // Contains numbers
-        assert!(!is_valid_name(""));       // Empty
-        assert!(!is_valid_name("A"));      // Too short
-    }
-
-    #[tokio::test]
-    async fn test_keyword_extraction_and_report() {
-        let mut data = SessionData::default();
-        // User mentions "rust" and "api"
-        let (_, _, data) = generate_reply(ConversationState::Idle, "I need a Rust backend API", data, vec![]).await;
-        
-        assert!(data.detected_keywords.contains(&"rust".to_string()));
-        assert!(data.detected_keywords.contains(&"api".to_string()));
-        assert!(!data.detected_keywords.contains(&"python".to_string()));
-    }
 }

@@ -7,7 +7,7 @@ pub struct ChatRequest {
     pub message: String,
 }
 
-#[derive(Serialize)]
+#[derive(Serialize, Deserialize)]
 pub struct ChatResponse {
     pub session_id: String,
     pub reply: String,

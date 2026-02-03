@@ -5,13 +5,8 @@ use std::sync::Arc;
 use std::time::Duration;
 use tokio::time;
 
-mod routes;
-mod state;
-mod message;
-mod error;
-mod services;
-
-use crate::state::AppState;
+use chatbot_backend::state::AppState;
+use chatbot_backend::routes;
 
 #[tokio::main]
 async fn main() {
