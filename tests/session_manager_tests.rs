@@ -34,7 +34,7 @@ async fn test_state_and_data_persistence() {
     let sid = mgr.create_session().await;
 
     // Test State
-    assert_eq!(mgr.get_state(&sid).await, ConversationState::Idle);
+    assert_eq!(mgr.get_state(&sid).await, ConversationState::AskingLanguage);
     mgr.set_state(&sid, ConversationState::AskingName).await;
     assert_eq!(mgr.get_state(&sid).await, ConversationState::AskingName);
 

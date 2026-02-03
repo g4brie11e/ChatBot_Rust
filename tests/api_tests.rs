@@ -33,12 +33,12 @@ async fn test_stateful_flow_integration() {
     let state = Arc::new(AppState::new(Duration::from_secs(60)));
     let app = create_router().with_state(state);
 
-    // 1. User asks for website
+    // 1. Select Language
     let req = Request::builder()
         .method("POST")
         .uri("/chat")
         .header("content-type", "application/json")
-        .body(Body::from(r#"{"message": "I want a website", "session_id": null}"#))
+        .body(Body::from(r#"{"message": "English", "session_id": null}"#))
         .unwrap();
     
     let response = app.clone().oneshot(req).await.unwrap();
@@ -49,9 +49,22 @@ async fn test_stateful_flow_integration() {
     let chat_resp: ChatResponse = serde_json::from_slice(&body_bytes).unwrap();
     
     let session_id = chat_resp.session_id;
+
+    // 2. User asks for website
+    let req = Request::builder()
+        .method("POST")
+        .uri("/chat")
+        .header("content-type", "application/json")
+        .body(Body::from(format!(r#"{{"message": "I want a website", "session_id": "{}"}}"#, session_id)))
+        .unwrap();
+
+    let response = app.clone().oneshot(req).await.unwrap();
+    let body_bytes = axum::body::to_bytes(response.into_body(), usize::MAX).await.unwrap();
+    let chat_resp: ChatResponse = serde_json::from_slice(&body_bytes).unwrap();
+
     assert!(chat_resp.reply.contains("name")); // Bot should ask for name
 
-    // 2. User sends Name (using the same session_id)
+    // 3. User sends Name (using the same session_id)
     let req = Request::builder()
         .method("POST")
         .uri("/chat")

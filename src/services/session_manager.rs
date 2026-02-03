@@ -12,6 +12,7 @@ use uuid::Uuid;
 
 #[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
 pub enum ConversationState {
+    AskingLanguage,
     Idle,
     AskingName,
     AskingEmail,
@@ -22,6 +23,8 @@ pub enum ConversationState {
 
 #[derive(Clone, Debug, Default, PartialEq, Serialize, Deserialize)]
 pub struct SessionData {
+    #[serde(default)]
+    pub language: String,
     pub name: Option<String>,
     pub email: Option<String>,
     pub budget: Option<String>,
@@ -60,8 +63,8 @@ impl Session {
             id: id.into(), 
             messages: Vec::new(), 
             last_active: now,
-            state: ConversationState::Idle,
-            data: SessionData::default(),
+            state: ConversationState::AskingLanguage,
+            data: SessionData { language: "en".to_string(), ..Default::default() },
         }
     }
 }
